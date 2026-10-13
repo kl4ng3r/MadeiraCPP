@@ -122,6 +122,21 @@ wine_macos() {  # host tree whose config.h / generated headers / tools the unix-
   make -j"$JOBS" __tooldeps__ include/all
 }
 
+dxmt_ios() {
+  # airconv_context.cpp includes air_msad.h / air_samplepos.h / air_tessellation.h, which
+  # DXMT's meson build generates (src/airconv/meson.build: metalir_generator with
+  # -std=metal3.1 --target=air64-apple-macos14.0, then hexdump_generator = xxd -n NAME -i).
+  # build/dxmt-ios/build.sh does not, so generate them into its shader-headers dir.
+  local H=build/dxmt-ios/shader-headers; mkdir -p "$H"
+  for sh in air_msad air_samplepos air_tessellation; do
+    xcrun -sdk macosx metal -std=metal3.1 --target=air64-apple-macos14.0 \
+      -o "$H/$sh.air" -c "dxmt/src/airconv/shaders/$sh.metal"
+    (cd "$H" && xxd -n "$sh" -i "$sh.air" "$sh.h")
+  done
+  ls -l "$H"
+  build/dxmt-ios/build.sh
+}
+
 wineserver() {
   # build/wineserver/build.sh only patches iOS objects into a prebuilt base archive
   # (app/Madeira/libwineserver.a, never committed). Recreate that base: every wine/server
@@ -244,7 +259,7 @@ step 11b-freetype     freetype
 step 12-ntdll-unix     ntdll_unix
 step 13-wineserver     wineserver
 step 14-win32u-unix    build/win32u-unix/build.sh
-step 15-dxmt-ios       build/dxmt-ios/build.sh
+step 15-dxmt-ios       dxmt_ios
 step 15b-dxmt-combined dxmt_combined
 step 16-dxmt-pe        dxmt_pe
 step 17-rppairing      build/rppairing-ios/build.sh
