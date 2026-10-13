@@ -221,8 +221,15 @@ dxmt_combined() {  # build/dxmt-ios/README.md: DXMT unix objs + LLVM iOS libs ->
 
 dxmt_pe() {
   [ -e dxmt/toolchains ] || ln -s ../toolchains dxmt/toolchains
-  [ -d dxmt/build-arm64ec ] || meson setup dxmt/build-arm64ec dxmt -Dbuildtype=release \
-    -Dwine_build_path=../../wine/build-arm64ec --cross-file=dxmt/build-arm64ec-win.txt
+  # winemetal links Wine's winecrt0 and the ntdll/dbghelp import libraries from the arm64ec tree.
+  export PATH="$(brew --prefix bison)/bin:$TC:$PATH"
+  make -C wine/build-arm64ec -j"$JOBS" libs/winecrt0/arm64ec-windows/libwinecrt0.a \
+    dlls/ntdll/arm64ec-windows/libntdll.a dlls/dbghelp/arm64ec-windows/libdbghelp.a tools/winebuild/winebuild
+  # Absolute path: DXMT resolves a relative wine_build_path against dxmt/, not the build dir,
+  # so BUILDING.md's ../../wine/build-arm64ec lands outside the repository.
+  rm -rf dxmt/build-arm64ec
+  meson setup dxmt/build-arm64ec dxmt -Dbuildtype=release \
+    -Dwine_build_path="$R/wine/build-arm64ec" --cross-file=dxmt/build-arm64ec-win.txt
   ninja -C dxmt/build-arm64ec src/winemetal/winemetal.dll src/d3d11/d3d11.dll
   cp dxmt/build-arm64ec/src/winemetal/winemetal.dll dxmt/build-arm64ec/src/d3d11/d3d11.dll app/Madeira/arm64ec-windows/
 }
