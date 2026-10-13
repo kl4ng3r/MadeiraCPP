@@ -32,7 +32,7 @@ jobs:
         id: llvm-cache
         uses: actions/cache/restore@v4
         with:
-          key: toolchains-llvm-8dfdcc7b7-mingw-20260421-v1
+          key: toolchains-llvm-8dfdcc7b7-mingw-20260421-v2
           path: |
             toolchains/llvm-mingw-20260421-ucrt-macos-universal
             toolchains/llvm-project/llvm/include
@@ -64,7 +64,7 @@ jobs:
         if: always() && steps.llvm-cache.outputs.cache-hit != 'true' && hashFiles('.build-stamps/04-llvm-ios') != ''
         uses: actions/cache/save@v4
         with:
-          key: toolchains-llvm-8dfdcc7b7-mingw-20260421-v1
+          key: toolchains-llvm-8dfdcc7b7-mingw-20260421-v2
           path: |
             toolchains/llvm-mingw-20260421-ucrt-macos-universal
             toolchains/llvm-project/llvm/include

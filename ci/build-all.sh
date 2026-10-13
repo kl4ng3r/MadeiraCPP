@@ -101,7 +101,10 @@ llvm_ios() {
     -DLLVM_BUILD_UTILS=Off -DLLVM_INCLUDE_TESTS=Off -DLLVM_ENABLE_ZLIB=Off \
     -DLLVM_TABLEGEN="$R/toolchains/llvm-host-build/bin/llvm-tblgen" \
     -DLLVM_ENABLE_PLUGINS=Off -DLLVM_INCLUDE_EXAMPLES=Off -DLLVM_BUILD_EXAMPLES=Off \
-    -DLLVM_INCLUDE_BENCHMARKS=Off
+    -DLLVM_INCLUDE_BENCHMARKS=Off \
+    -DLLVM_ENABLE_TERMINFO=Off -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0
+  # TERMINFO off: otherwise LLVM Support finds the SDK's libcurses and the app link misses
+  # setupterm/tigetnum. Deployment target matches the app's (else objects default to the SDK's).
   # Only the libraries: DXMT's airconv links them; iOS tools/plugins don't link (LLVMHello.def).
   # Static archives only (libLTO/libRemarks dylibs pass -z defs, which Apple ld rejects).
   ninja -C toolchains/llvm-ios-build $(ninja -C toolchains/llvm-ios-build -t targets all \
