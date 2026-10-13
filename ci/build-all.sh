@@ -122,6 +122,17 @@ wine_macos() {  # host tree whose config.h / generated headers / tools the unix-
   make -j"$JOBS" __tooldeps__ include/all
 }
 
+ntdll_unix() {
+  # server_ios.c logs rusage_info_v6.ri_page_wait_time_mach (the "pgw=" diagnostic), a field
+  # only newer iOS SDKs declare. On an SDK without it, log 0 for that one value.
+  H="$(xcrun --sdk iphoneos --show-sdk-path)/usr/include/sys/resource.h"
+  if ! grep -q ri_page_wait_time_mach "$H"; then
+    echo "SDK lacks ri_page_wait_time_mach: logging pgw=0"
+    sed -i '' 's/XP_MS( ru\.ri_page_wait_time_mach - pru\.ri_page_wait_time_mach )/0.0/' build/ntdll-unix/server_ios.c
+  fi
+  build/ntdll-unix/build.sh
+}
+
 freetype() {  # build/freetype-ios/build.sh expects this clone (its header); dwrite + win32u need it
   [ -d research/freetype/.git ] || git clone --depth 1 --branch VER-2-13-3 \
     https://github.com/freetype/freetype.git research/freetype
@@ -202,7 +213,7 @@ step 09-wine-arm64ec   wine_arm64ec
 step 10-wine-modules   bash -c 'export PATH="$(brew --prefix bison)/bin:$PATH"; build/wine-pe/build-modules.sh'
 step 11-wine-macos     wine_macos
 step 11b-freetype     freetype
-step 12-ntdll-unix     build/ntdll-unix/build.sh
+step 12-ntdll-unix     ntdll_unix
 step 13-wineserver     build/wineserver/build.sh
 step 14-win32u-unix    build/win32u-unix/build.sh
 step 15-dxmt-ios       build/dxmt-ios/build.sh
