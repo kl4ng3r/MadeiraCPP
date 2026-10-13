@@ -125,7 +125,7 @@ wine_macos() {  # host tree whose config.h / generated headers / tools the unix-
 freetype() {  # build/freetype-ios/build.sh expects this clone (its header); dwrite + win32u need it
   [ -d research/freetype/.git ] || git clone --depth 1 --branch VER-2-13-3 \
     https://github.com/freetype/freetype.git research/freetype
-  build/freetype-ios/build.sh
+  bash build/freetype-ios/build.sh   # tracked without the executable bit
 }
 
 fex_ios() {  # build/fex-ios/build.sh options + CMAKE_SYSTEM_PROCESSOR (empty for iOS)
