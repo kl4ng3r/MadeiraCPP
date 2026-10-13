@@ -122,6 +122,34 @@ wine_macos() {  # host tree whose config.h / generated headers / tools the unix-
   make -j"$JOBS" __tooldeps__ include/all
 }
 
+wineserver() {
+  # build/wineserver/build.sh only patches iOS objects into a prebuilt base archive
+  # (app/Madeira/libwineserver.a, never committed). Recreate that base: every wine/server
+  # source the patch list does not replace, compiled with the script's own flags.
+  if [ ! -f app/Madeira/libwineserver.a ] && [ ! -f build/wineserver/obj/libwineserver.a ]; then
+    local SDK B=build/wineserver W=wine OBJ=build/wineserver/obj/base fails=""
+    SDK=$(xcrun --sdk iphoneos --show-sdk-path); mkdir -p "$OBJ"
+    local FLAGS=(-arch arm64 -isysroot "$SDK" -miphoneos-version-min=17.0 -O2
+      -I"$W/include" -I"$W/include/wine" -I"$W/build-macos/include" -I"$B" -I"$W/server"
+      -Ibuild/ntdll-unix/shims -Ibuild/madsync -DHAVE_LINUX_NTSYNC_H=1
+      -include "$B/config_ios.h" -include stdarg.h -include "$B/unicode_fix.h"
+      -include "$B/wineserver_ios_kill.h"
+      -DBINDIR=\"/usr/local/bin\" -DDATADIR=\"/usr/local/share\" -D__WINESRC__ -DWINE_IOS=1
+      -Dmain=wineserver_main -Wno-implicit-function-declaration)
+    for f in atom change clipboard completion console d3dkmt debugger device directory file hook \
+             mailslot mutex named_pipe procfs ptrace registry serial signal symlink timer token trace; do
+      if xcrun -sdk iphoneos clang "${FLAGS[@]}" -c "$W/server/$f.c" -o "$OBJ/$f.o" 2>"$OBJ/$f.err"; then
+        echo "  base $f OK"
+      else
+        echo "  base $f FAILED"; head -20 "$OBJ/$f.err"; fails="$fails $f"
+      fi
+    done
+    [ -z "$fails" ] || { echo "base objects failed:$fails"; exit 1; }
+    ar rcs app/Madeira/libwineserver.a "$OBJ"/*.o
+  fi
+  build/wineserver/build.sh
+}
+
 ntdll_unix() {
   # server_ios.c logs rusage_info_v6.ri_page_wait_time_mach (the "pgw=" diagnostic), a field
   # only newer iOS SDKs declare. On an SDK without it, log 0 for that one value.
@@ -214,7 +242,7 @@ step 10-wine-modules   bash -c 'export PATH="$(brew --prefix bison)/bin:$PATH"; 
 step 11-wine-macos     wine_macos
 step 11b-freetype     freetype
 step 12-ntdll-unix     ntdll_unix
-step 13-wineserver     build/wineserver/build.sh
+step 13-wineserver     wineserver
 step 14-win32u-unix    build/win32u-unix/build.sh
 step 15-dxmt-ios       build/dxmt-ios/build.sh
 step 15b-dxmt-combined dxmt_combined
